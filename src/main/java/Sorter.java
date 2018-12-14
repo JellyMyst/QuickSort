@@ -23,6 +23,10 @@ public class Sorter<T extends Comparable<T>> {
     private long serialTime;
     private long parallelTime;
 
+    /**
+     * Sorts the list stored in this object using a serial implementation of the QuickSort algorithm.
+     * @return sorted list
+     */
     public List<T> serialSort() {
         List<T> result = new ArrayList<>(unsorted);
 
@@ -33,6 +37,11 @@ public class Sorter<T extends Comparable<T>> {
         return result;
     }
 
+    /**
+     * Sorts the list passed in using the QuickSort algorithm.
+     * Implementation adapted from https://www.programcreek.com/2012/11/quicksort-array-in-java/
+     * @param arr list of comparable objects
+     */
     private void serialSortInternal(List<T> arr) {
         // pick the pivot
         T pivot = arr.get(0);
@@ -63,6 +72,10 @@ public class Sorter<T extends Comparable<T>> {
             serialSortInternal(arr.subList(i, arr.size()));
     }
 
+    /**
+     * Sorts the list stored in this object using a parallel implementation of the QuickSort algorithm.
+     * @return sorted list
+     */
     public List<T> parallelSort() {
         SparkConf conf = new SparkConf().setAppName("QuickSort").setMaster(master);
         JavaSparkContext sc = new JavaSparkContext(conf);
@@ -76,6 +89,11 @@ public class Sorter<T extends Comparable<T>> {
         return Objects.requireNonNull(result).collect();
     }
 
+    /**
+     * Sorts the JavaRDD passed in using the QuickSort algorithm.
+     * @param arr JavaRDD of comparable objects
+     * @return sorted JavaRDD
+     */
     private JavaRDD<T> parallelSortInternal(JavaRDD<T> arr) {
         // pick the pivot
         final T pivot = arr.first();
