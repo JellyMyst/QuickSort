@@ -96,18 +96,13 @@ public class Sorter<T extends Comparable<T>> {
      * @return sorted JavaRDD
      */
     private JavaRDD<T> parallelSortInternal(JavaRDD<T> arr) {
-        arr.cache();
-
         // pick the pivot
         final T pivot = arr.first();
 
         // make below < pivot, same == pivot, and above > pivot
-        JavaRDD<T> below = arr.filter((Function<T, Boolean>) t -> t.compareTo(pivot) < 0)
-                .persist(StorageLevel.MEMORY_AND_DISK());
-        JavaRDD<T> same = arr.filter((Function<T, Boolean>) t -> t.compareTo(pivot) == 0)
-                .persist(StorageLevel.MEMORY_AND_DISK());
-        JavaRDD<T> above = arr.filter((Function<T, Boolean>) t -> t.compareTo(pivot) > 0)
-                .persist(StorageLevel.MEMORY_AND_DISK());
+        JavaRDD<T> below = arr.filter((Function<T, Boolean>) t -> t.compareTo(pivot) < 0).cache();
+        JavaRDD<T> same = arr.filter((Function<T, Boolean>) t -> t.compareTo(pivot) == 0).cache();
+        JavaRDD<T> above = arr.filter((Function<T, Boolean>) t -> t.compareTo(pivot) > 0).cache();
 
         // recursively sort two sub parts
         if (below.count() > 1)
