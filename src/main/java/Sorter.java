@@ -100,15 +100,20 @@ public class Sorter<T extends Comparable<T>> {
         final T pivot = arr.first();
 
         // make below < pivot and above >= pivot
-        JavaPairRDD<Boolean, T> grouped = arr
-                .mapToPair((PairFunction<T, Boolean, T>) t -> new Tuple2<>(t.compareTo(pivot) < 0, t)).cache();
+        JavaPairRDD<Case, T> grouped = arr
+                .mapToPair((PairFunction<T, Case, T>) t -> new Tuple2<>(t.compareTo(pivot) < 0 ? Case.BELOW :
+                                                                        t.compareTo(pivot) > 0 ? Case.ABOVE :
+                                                                        Case.SAME, t)).cache();
         // JavaRDD<Tuple2<Boolean, T>> grouped = arr.map((T v1) -> new Tuple2<>(v1.compareTo(pivot) < 0, v1)).cache();
-        JavaRDD<T> below = grouped.filter((Function<Tuple2<Boolean, T>, Boolean>) Tuple2::_1)
+        JavaRDD<T> below = grouped.filter((Function<Tuple2<Case, T>, Boolean>) v1 -> v1._1() == Case.BELOW)
                 .persist(StorageLevel.MEMORY_AND_DISK())
-                .map((Function<Tuple2<Boolean, T>, T>) Tuple2::_2);
-        JavaRDD<T> above = grouped.filter((Function<Tuple2<Boolean, T>, Boolean>) v1 -> !v1._1())
+                .map((Function<Tuple2<Case, T>, T>) Tuple2::_2);
+        JavaRDD<T> same = grouped.filter((Function<Tuple2<Case, T>, Boolean>) v1 -> v1._1() == Case.SAME)
                 .persist(StorageLevel.MEMORY_AND_DISK())
-                .map((Function<Tuple2<Boolean, T>, T>) Tuple2::_2);
+                .map((Function<Tuple2<Case, T>, T>) Tuple2::_2);
+        JavaRDD<T> above = grouped.filter((Function<Tuple2<Case, T>, Boolean>) v1 -> v1._1() == Case.ABOVE)
+                .persist(StorageLevel.MEMORY_AND_DISK())
+                .map((Function<Tuple2<Case, T>, T>) Tuple2::_2);
 
         // recursively sort two sub parts
         if (below.count() > 1)
@@ -117,7 +122,7 @@ public class Sorter<T extends Comparable<T>> {
         if (above.count() > 1)
             above = parallelSortInternal(above);
 
-        return below.union(above);
+        return below.union(same).union(above);
     }
 
     public long getSerialTime() {
@@ -126,5 +131,9 @@ public class Sorter<T extends Comparable<T>> {
 
     public long getParallelTime() {
         return parallelTime;
+    }
+
+    private enum Case {
+        BELOW, SAME, ABOVE
     }
 }
