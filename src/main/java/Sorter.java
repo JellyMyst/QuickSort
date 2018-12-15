@@ -96,24 +96,18 @@ public class Sorter<T extends Comparable<T>> {
      * @return sorted JavaRDD
      */
     private JavaRDD<T> parallelSortInternal(JavaRDD<T> arr) {
+        arr.cache();
+
         // pick the pivot
         final T pivot = arr.first();
 
-        // make below < pivot and above >= pivot
-        JavaPairRDD<Case, T> grouped = arr
-                .mapToPair((PairFunction<T, Case, T>) t -> new Tuple2<>(t.compareTo(pivot) < 0 ? Case.BELOW :
-                                                                        t.compareTo(pivot) > 0 ? Case.ABOVE :
-                                                                        Case.SAME, t)).cache();
-        // JavaRDD<Tuple2<Boolean, T>> grouped = arr.map((T v1) -> new Tuple2<>(v1.compareTo(pivot) < 0, v1)).cache();
-        JavaRDD<T> below = grouped.filter((Function<Tuple2<Case, T>, Boolean>) v1 -> v1._1() == Case.BELOW)
-                .persist(StorageLevel.MEMORY_AND_DISK())
-                .map((Function<Tuple2<Case, T>, T>) Tuple2::_2);
-        JavaRDD<T> same = grouped.filter((Function<Tuple2<Case, T>, Boolean>) v1 -> v1._1() == Case.SAME)
-                .persist(StorageLevel.MEMORY_AND_DISK())
-                .map((Function<Tuple2<Case, T>, T>) Tuple2::_2);
-        JavaRDD<T> above = grouped.filter((Function<Tuple2<Case, T>, Boolean>) v1 -> v1._1() == Case.ABOVE)
-                .persist(StorageLevel.MEMORY_AND_DISK())
-                .map((Function<Tuple2<Case, T>, T>) Tuple2::_2);
+        // make below < pivot, same == pivot, and above > pivot
+        JavaRDD<T> below = arr.filter((Function<T, Boolean>) t -> t.compareTo(pivot) < 0)
+                .persist(StorageLevel.MEMORY_AND_DISK());
+        JavaRDD<T> same = arr.filter((Function<T, Boolean>) t -> t.compareTo(pivot) == 0)
+                .persist(StorageLevel.MEMORY_AND_DISK());
+        JavaRDD<T> above = arr.filter((Function<T, Boolean>) t -> t.compareTo(pivot) > 0)
+                .persist(StorageLevel.MEMORY_AND_DISK());
 
         // recursively sort two sub parts
         if (below.count() > 1)
@@ -131,9 +125,5 @@ public class Sorter<T extends Comparable<T>> {
 
     public long getParallelTime() {
         return parallelTime;
-    }
-
-    private enum Case {
-        BELOW, SAME, ABOVE
     }
 }
