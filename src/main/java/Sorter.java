@@ -14,7 +14,8 @@ public class Sorter<T extends Comparable<T>> {
         if (unsorted == null || unsorted.size() == 0)
             throw new IllegalArgumentException("Please supply actual data.");
 
-        this.unsorted = unsorted;
+        this.unsorted = new ArrayList<>(unsorted);
+        Collections.shuffle(this.unsorted);
         this.master = master;
     }
 
